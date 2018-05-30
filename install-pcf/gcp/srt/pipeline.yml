@@ -1,0 +1,454 @@
+groups: []
+resources:
+- name: pcf-pipelines-tarball
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: pcf-automation
+    product_version: v0.22.0
+- name: terraform-state
+  type: gcs
+  source:
+    bucket: {{terraform_statefile_bucket}}
+    json_key: {{gcp_service_account_key}}
+    versioned_file: terraform.tfstate
+- name: pivnet-opsmgr
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: ops-manager
+    product_version: {{opsman_major_minor_version}}
+    sort_by: semver
+- name: pivnet-elastic-runtime
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: elastic-runtime
+    product_version: {{ert_major_minor_version}}
+    sort_by: semver
+- name: cf-configuration
+  type: staticfile
+  source:
+    files:
+    - data: {{cf_properties}}
+      filename: properties.yml
+    - data: {{cf_network}}
+      filename: network.yml
+    - data: {{cf_resources}}
+      filename: resources.yml
+resource_types:
+- name: pivnet
+  type: docker-image
+  source:
+    repository: pivotalcf/pivnet-resource
+    tag: latest-final
+- name: staticfile
+  type: docker-image
+  source:
+    repository: czero/staticfile-resource
+- name: gcs
+  type: docker-image
+  source:
+    repository: frodenas/gcs-resource
+jobs:
+- name: wipe-env
+  serial_groups:
+  - terraform
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: terraform-state
+  - task: wipe
+    file: pcf-pipelines/install-pcf/gcp/tasks/wipe-env/task.yml
+    params:
+      GCP_PROJECT_ID: {{gcp_project_id}}
+      GCP_REGION: {{gcp_region}}
+      GCP_RESOURCE_PREFIX: {{gcp_resource_prefix}}
+      GCP_SERVICE_ACCOUNT_KEY: {{gcp_service_account_key}}
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+      OPSMAN_PASSWORD: {{opsman_admin_password}}
+      OPSMAN_USERNAME: {{opsman_admin_username}}
+      OPSMAN_ZONE: {{gcp_zone_1}}
+  ensure:
+    put: terraform-state
+    params:
+      file: wipe-output/*.tfstate
+- name: upload-opsman-image
+  plan:
+  - do:
+    - get: pcf-pipelines-tarball
+    - task: unpack-tarball
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: czero/rootfs
+        run:
+          path: bash
+          args:
+          - -c
+          - tar -xvf pcf-pipelines-tarball/*.tgz
+        inputs:
+        - name: pcf-pipelines-tarball
+          path: ""
+        outputs:
+        - name: pcf-pipelines
+          path: ""
+  - get: pivnet-opsmgr
+    trigger: true
+    params:
+      globs:
+      - '*GCP.yml'
+  - task: upload
+    file: pcf-pipelines/install-pcf/gcp/tasks/upload-opsman/task.yml
+    params:
+      GCP_PROJECT_ID: {{gcp_project_id}}
+      GCP_REGION: {{gcp_region}}
+      GCP_SERVICE_ACCOUNT_KEY: {{gcp_service_account_key}}
+- name: bootstrap-terraform-state
+  serial: true
+  plan:
+  - do:
+    - get: pcf-pipelines-tarball
+    - task: unpack-tarball
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: czero/rootfs
+        run:
+          path: bash
+          args:
+          - -c
+          - tar -xvf pcf-pipelines-tarball/*.tgz
+        inputs:
+        - name: pcf-pipelines-tarball
+          path: ""
+        outputs:
+        - name: pcf-pipelines
+          path: ""
+  - task: create-terraform-state
+    file: pcf-pipelines/install-pcf/gcp/tasks/create-initial-terraform-state/task.yml
+    params:
+      GCP_SERVICE_ACCOUNT_KEY: {{gcp_service_account_key}}
+      TERRAFORM_STATEFILE_BUCKET: {{terraform_statefile_bucket}}
+- name: create-infrastructure
+  serial_groups:
+  - terraform
+  plan:
+  - aggregate:
+    - get: terraform-state
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: pivnet-opsmgr
+      passed:
+      - upload-opsman-image
+      params:
+        globs:
+        - '*GCP.yml'
+  - task: create-infrastructure
+    file: pcf-pipelines/install-pcf/gcp/tasks/create-infrastructure/task.yml
+    params:
+      DB_ACCOUNTDB_PASSWORD: {{db_accountdb_password}}
+      DB_ACCOUNTDB_USERNAME: {{db_accountdb_username}}
+      DB_APP_USAGE_SERVICE_PASSWORD: {{db_app_usage_service_password}}
+      DB_APP_USAGE_SERVICE_USERNAME: {{db_app_usage_service_username}}
+      DB_AUTOSCALE_PASSWORD: {{db_autoscale_password}}
+      DB_AUTOSCALE_USERNAME: {{db_autoscale_username}}
+      DB_CCDB_PASSWORD: {{db_ccdb_password}}
+      DB_CCDB_USERNAME: {{db_ccdb_username}}
+      DB_DIEGO_PASSWORD: {{db_diego_password}}
+      DB_DIEGO_USERNAME: {{db_diego_username}}
+      DB_LOCKET_PASSWORD: {{db_locket_password}}
+      DB_LOCKET_USERNAME: {{db_locket_username}}
+      DB_NETWORKPOLICYSERVERDB_PASSWORD: {{db_networkpolicyserverdb_password}}
+      DB_NETWORKPOLICYSERVERDB_USERNAME: {{db_networkpolicyserverdb_username}}
+      DB_NFSVOLUMEDB_PASSWORD: {{db_nfsvolumedb_password}}
+      DB_NFSVOLUMEDB_USERNAME: {{db_nfsvolumedb_username}}
+      DB_NOTIFICATIONS_PASSWORD: {{db_notifications_password}}
+      DB_NOTIFICATIONS_USERNAME: {{db_notifications_username}}
+      DB_ROUTING_PASSWORD: {{db_routing_password}}
+      DB_ROUTING_USERNAME: {{db_routing_username}}
+      DB_SILK_PASSWORD: {{db_silk_password}}
+      DB_SILK_USERNAME: {{db_silk_username}}
+      DB_UAA_PASSWORD: {{db_uaa_password}}
+      DB_UAA_USERNAME: {{db_uaa_username}}
+      GCP_PROJECT_ID: {{gcp_project_id}}
+      GCP_REGION: {{gcp_region}}
+      GCP_RESOURCE_PREFIX: {{gcp_resource_prefix}}
+      GCP_SERVICE_ACCOUNT_KEY: {{gcp_service_account_key}}
+      GCP_STORAGE_BUCKET_LOCATION: {{gcp_storage_bucket_location}}
+      GCP_ZONE_1: {{gcp_zone_1}}
+      GCP_ZONE_2: {{gcp_zone_2}}
+      GCP_ZONE_3: {{gcp_zone_3}}
+      PCF_ERT_DOMAIN: {{pcf_ert_domain}}
+      PCF_ERT_SSL_CERT: {{pcf_ert_ssl_cert}}
+      PCF_ERT_SSL_KEY: {{pcf_ert_ssl_key}}
+  ensure:
+    put: terraform-state
+    params:
+      file: create-infrastructure-output/*.tfstate
+- name: configure-director
+  serial_groups:
+  - opsman
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: pivnet-opsmgr
+      passed:
+      - create-infrastructure
+      params:
+        globs: []
+  - task: check-opsman-dns
+    file: pcf-pipelines/install-pcf/gcp/tasks/check-opsman-dns/task.yml
+    params:
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+  - task: config-opsman-auth
+    file: pcf-pipelines/tasks/config-opsman/task.yml
+    params:
+      OM_DECRYPTION_PWD: {{opsman_admin_password}}
+      OPS_MGR_PWD: {{opsman_admin_password}}
+      OPS_MGR_USR: {{opsman_admin_username}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+  - task: configure-director
+    file: pcf-pipelines/install-pcf/gcp/tasks/config-director/task.yml
+    params:
+      GCP_PROJECT_ID: {{gcp_project_id}}
+      GCP_REGION: {{gcp_region}}
+      GCP_RESOURCE_PREFIX: {{gcp_resource_prefix}}
+      GCP_SERVICE_ACCOUNT_KEY: {{gcp_service_account_key}}
+      GCP_ZONE_1: {{gcp_zone_1}}
+      GCP_ZONE_2: {{gcp_zone_2}}
+      GCP_ZONE_3: {{gcp_zone_3}}
+      OPS_MGR_PWD: {{opsman_admin_password}}
+      OPS_MGR_TRUSTED_CERTS: {{opsman_trusted_certs}}
+      OPS_MGR_USR: {{opsman_admin_username}}
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+- name: deploy-director
+  serial_groups:
+  - opsman
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: pivnet-opsmgr
+      passed:
+      - configure-director
+      trigger: true
+      params:
+        globs: []
+  - task: deploy-director
+    file: pcf-pipelines/tasks/apply-changes/task.yml
+    params:
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+      OPSMAN_PASSWORD: {{opsman_admin_password}}
+      OPSMAN_USERNAME: {{opsman_admin_username}}
+- name: upload-srt
+  serial_groups:
+  - opsman
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: pivnet-opsmgr
+      passed:
+      - deploy-director
+      trigger: true
+      params:
+        globs: []
+    - get: pivnet-product
+      resource: pivnet-elastic-runtime
+      params:
+        globs:
+        - srt*.pivotal
+  - task: upload-tile
+    file: pcf-pipelines/tasks/upload-product-and-stemcell/task.yml
+    params:
+      IAAS: google
+      NO_PROXY: ""
+      OM_IP: ""
+      OPS_MGR_PWD: {{opsman_admin_password}}
+      OPS_MGR_USR: {{opsman_admin_username}}
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+      PIVNET_API_TOKEN: {{pivnet_token}}
+  - task: stage-tile
+    file: pcf-pipelines/tasks/stage-product/task.yml
+    params:
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+      OPSMAN_PASSWORD: {{opsman_admin_password}}
+      OPSMAN_USERNAME: {{opsman_admin_username}}
+- name: deploy-srt
+  serial_groups:
+  - opsman
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: pivnet-opsmgr
+      passed:
+      - upload-srt
+      trigger: true
+      params:
+        globs: []
+    - get: configuration
+      resource: cf-configuration
+  - task: convert-yaml-to-json
+    file: pcf-pipelines/tasks/convert-yaml-to-json/task.yml
+    params:
+      GLOBS: '*.yml'
+    input_mapping:
+      yaml: configuration
+    output_mapping:
+      json: configuration
+  - task: configure
+    file: pcf-pipelines/tasks/configure-product/task.yml
+    params:
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+      OPSMAN_PASSWORD: {{opsman_admin_password}}
+      OPSMAN_USERNAME: {{opsman_admin_username}}
+      PRODUCT_NAME: cf
+      PRODUCT_NETWORK_FILE: configuration/network.json
+      PRODUCT_PROPERTIES_FILE: configuration/properties.json
+      PRODUCT_RESOURCES_FILE: configuration/resources.json
+  - task: disable-errands
+    file: pcf-pipelines/tasks/disable-errands/task.yml
+    params:
+      ERRANDS_TO_DISABLE: {{ert_errands_to_disable}}
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+      OPSMAN_PASSWORD: {{opsman_admin_password}}
+      OPSMAN_USERNAME: {{opsman_admin_username}}
+      PRODUCT_NAME: cf
+  - task: deploy
+    file: pcf-pipelines/tasks/apply-changes/task.yml
+    params:
+      OPSMAN_CLIENT_ID: {{opsman_client_id}}
+      OPSMAN_CLIENT_SECRET: {{opsman_client_secret}}
+      OPSMAN_DOMAIN_OR_IP_ADDRESS: {{opsman_domain_or_ip_address}}
+      OPSMAN_PASSWORD: {{opsman_admin_password}}
+      OPSMAN_USERNAME: {{opsman_admin_username}}

@@ -1,0 +1,891 @@
+groups: []
+resources:
+- name: pcf-pipelines-tarball
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: pcf-automation
+    product_version: v0.22.0
+- name: binary-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: Binary*
+- name: dotnet-core-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: .NET*
+- name: go-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: Go*
+- name: java-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: Java*
+- name: nodejs-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: NodeJS*
+- name: php-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: PHP*
+- name: python-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: Python*
+- name: ruby-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: Ruby*
+- name: staticfile-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: Staticfile*
+- name: tc-buildpack
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: buildpacks
+    product_version: tc Server*
+- name: schedule
+  type: time
+  source:
+    days:
+    - Sunday
+    - Monday
+    - Tuesday
+    - Wednesday
+    - Thursday
+    - Friday
+    - Saturday
+    interval: 30m
+    location: America/Los_Angeles
+    start: 12:00 AM
+    stop: 11:59 PM
+resource_types:
+- name: pivnet
+  type: docker-image
+  source:
+    repository: pivotalcf/pivnet-resource
+    tag: latest-final
+jobs:
+- name: regulator
+  plan:
+  - aggregate:
+    - get: schedule
+      trigger: true
+    - get: binary-buildpack
+      params:
+        globs: []
+    - get: dotnet-core-buildpack
+      params:
+        globs: []
+    - get: go-buildpack
+      params:
+        globs: []
+    - get: java-buildpack
+      params:
+        globs: []
+    - get: nodejs-buildpack
+      params:
+        globs: []
+    - get: php-buildpack
+      params:
+        globs: []
+    - get: python-buildpack
+      params:
+        globs: []
+    - get: ruby-buildpack
+      params:
+        globs: []
+    - get: staticfile-buildpack
+      params:
+        globs: []
+    - get: tc-buildpack
+      params:
+        globs: []
+- name: stage-binary-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: binary-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: binary_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-binary-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: binary-buildpack
+      passed:
+      - stage-binary-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: binary_buildpack_latest
+      TARGET_BUILDPACK_NAME: binary_buildpack
+- name: stage-dotnet-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: dotnet-core-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: dotnet_core_buildpack_offline_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-dotnet-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: dotnet-core-buildpack
+      passed:
+      - stage-dotnet-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: dotnet_core_buildpack_offline_latest
+      TARGET_BUILDPACK_NAME: dotnet_core_buildpack_offline
+- name: stage-go-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: go-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: go_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-go-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: go-buildpack
+      passed:
+      - stage-go-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: go_buildpack_latest
+      TARGET_BUILDPACK_NAME: go_buildpack
+- name: stage-java-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: java-buildpack
+      params:
+        globs:
+        - '*offline*'
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: java_buildpack_offline_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-java-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: java-buildpack
+      passed:
+      - stage-java-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: java_buildpack_offline_latest
+      TARGET_BUILDPACK_NAME: java_buildpack_offline
+- name: stage-nodejs-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: nodejs-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: nodejs_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-nodejs-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: nodejs-buildpack
+      passed:
+      - stage-nodejs-buildpack
+      trigger: true
+      params:
+        globs: []
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: nodejs_buildpack_latest
+      TARGET_BUILDPACK_NAME: nodejs_buildpack
+- name: stage-php-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: php-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: php_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-php-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: php-buildpack
+      passed:
+      - stage-php-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: php_buildpack_latest
+      TARGET_BUILDPACK_NAME: php_buildpack
+- name: stage-python-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: python-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: python_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-python-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: python-buildpack
+      passed:
+      - stage-python-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: python_buildpack_latest
+      TARGET_BUILDPACK_NAME: python_buildpack
+- name: stage-ruby-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: ruby-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: ruby_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-ruby-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: ruby-buildpack
+      passed:
+      - stage-ruby-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: ruby_buildpack_latest
+      TARGET_BUILDPACK_NAME: ruby_buildpack
+- name: stage-staticfile-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: staticfile-buildpack
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: staticfile_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-staticfile-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: staticfile-buildpack
+      passed:
+      - stage-staticfile-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: staticfile_buildpack_latest
+      TARGET_BUILDPACK_NAME: staticfile_buildpack
+- name: stage-tcserver-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+    - get: buildpack
+      passed:
+      - regulator
+      trigger: true
+      resource: tc-buildpack
+      params:
+        globs:
+        - '*offline*'
+  - task: stage
+    file: pcf-pipelines/tasks/stage-buildpack/task.yml
+    params:
+      BUILDPACK_NAME: tc_buildpack_latest
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+- name: promote-tcserver-buildpack
+  serial_groups:
+  - cc-api
+  plan:
+  - aggregate:
+    - get: tc-buildpack
+      passed:
+      - stage-tcserver-buildpack
+      trigger: true
+      params:
+        globs: []
+    - do:
+      - get: pcf-pipelines-tarball
+      - task: unpack-tarball
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: czero/rootfs
+          run:
+            path: bash
+            args:
+            - -c
+            - tar -xvf pcf-pipelines-tarball/*.tgz
+          inputs:
+          - name: pcf-pipelines-tarball
+            path: ""
+          outputs:
+          - name: pcf-pipelines
+            path: ""
+  - task: promote
+    file: pcf-pipelines/tasks/promote-buildpack/task.yml
+    params:
+      CF_API_URI: {{cf_api_uri}}
+      CF_PASSWORD: {{cf_password}}
+      CF_USERNAME: {{cf_user}}
+      SOURCE_BUILDPACK_NAME: tc_buildpack_latest
+      TARGET_BUILDPACK_NAME: tc_buildpack

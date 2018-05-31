@@ -54,14 +54,14 @@ resource "aws_iam_user_policy" "PcfErtPolicy" {
                 "s3:*"
             ],
             "Resource": [
-                "arn:aws:s3:::${var.prefix}-buildpacks",
-                "arn:aws:s3:::${var.prefix}-buildpacks/*",
-                "arn:aws:s3:::${var.prefix}-droplets",
-                "arn:aws:s3:::${var.prefix}-droplets/*",
-                "arn:aws:s3:::${var.prefix}-packages",
-                "arn:aws:s3:::${var.prefix}-packages/*",
-                "arn:aws:s3:::${var.prefix}-resources",
-                "arn:aws:s3:::${var.prefix}-resources/*"
+                "arn:aws:s3:::${var.prefix}-buildpacks18",
+                "arn:aws:s3:::${var.prefix}-buildpacks18/*",
+                "arn:aws:s3:::${var.prefix}-droplets18",
+                "arn:aws:s3:::${var.prefix}-droplets18/*",
+                "arn:aws:s3:::${var.prefix}-packages18",
+                "arn:aws:s3:::${var.prefix}-packages18/*",
+                "arn:aws:s3:::${var.prefix}-resources18",
+                "arn:aws:s3:::${var.prefix}-resources18/*"
             ],
             "Effect": "Allow",
             "Sid": "ElasticRuntimeS3Permissions"

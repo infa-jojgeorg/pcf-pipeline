@@ -42,7 +42,7 @@ read -r -d '' director_configuration <<EOF
   "blobstore_type": "s3",
   "s3_blobstore_options": {
     "endpoint": "$S3_ENDPOINT",
-    "bucket_name": "$s3_pcf_bosh",
+    "bucket_name": "$s3_pcf_bosh18",
     "access_key": "$aws_access_key_id",
     "secret_key": "$aws_secret_access_key",
     "signature_version": "4",

@@ -29,20 +29,20 @@ output "opsman_identifier" {
     value = "${aws_instance.opsmman_az1.tags.Name}"
 }
 # s3 buckets
-output "s3_pcf_bosh" {
-    value = "${aws_s3_bucket.bosh.bucket}"
+output "s3_pcf_bosh18" {
+    value = "${aws_s3_bucket.bosh18.bucket}"
 }
-output "s3_buildpacks" {
-    value = "${aws_s3_bucket.buildpacks.bucket}"
+output "s3_buildpacks18" {
+    value = "${aws_s3_bucket.buildpacks18.bucket}"
 }
-output "s3_pcf_droplets" {
-    value = "${aws_s3_bucket.droplets.bucket}"
+output "s3_pcf_droplets18" {
+    value = "${aws_s3_bucket.droplets18.bucket}"
 }
-output "s3_pcf_packages" {
-    value = "${aws_s3_bucket.packages.bucket}"
+output "s3_pcf_packages18" {
+    value = "${aws_s3_bucket.packages18.bucket}"
 }
-output "s3_pcf_resources" {
-    value = "${aws_s3_bucket.resources.bucket}"
+output "s3_pcf_resources18" {
+    value = "${aws_s3_bucket.resources18.bucket}"
 }
 
 # DNS

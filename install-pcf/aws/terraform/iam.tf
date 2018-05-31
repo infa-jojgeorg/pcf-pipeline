@@ -181,8 +181,8 @@ data "aws_iam_policy_document" "pcf_iam_rds_role_policy_document" {
                 "s3:*"
             ],
         resources = [
-                "arn:aws:s3:::${var.prefix}-bosh",
-                "arn:aws:s3:::${var.prefix}-bosh/*",
+                "arn:aws:s3:::${var.prefix}-bosh18",
+                "arn:aws:s3:::${var.prefix}-bosh18/*",
         ],
         effect = "Allow",
         sid = "PcfAdminS3Permissions"

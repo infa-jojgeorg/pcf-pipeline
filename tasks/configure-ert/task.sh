@@ -112,7 +112,6 @@ cf_resources=$(
         "instances": 0,
         "internet_connected": $internet_connected
       },
-      "diego_brain": {"internet_connected": $internet_connected},
       "diego_cell": {"internet_connected": $internet_connected},
       "loggregator_trafficcontroller": {"internet_connected": $internet_connected},
       "syslog_adapter": {"internet_connected": $internet_connected},

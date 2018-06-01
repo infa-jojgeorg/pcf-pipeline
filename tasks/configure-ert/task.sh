@@ -94,8 +94,6 @@ cf_resources=$(
     --argjson internet_connected $INTERNET_CONNECTED \
     '
     {
-      "nfs_server": {"internet_connected": $internet_connected},
-      "uaa": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},
       "syslog_adapter": {"internet_connected": $internet_connected},
       "syslog_scheduler": {"internet_connected": $internet_connected},

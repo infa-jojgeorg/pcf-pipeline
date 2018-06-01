@@ -114,7 +114,6 @@ cf_resources=$(
         "instances": 0,
         "internet_connected": $internet_connected
       },
-      "cloud_controller_worker": {"internet_connected": $internet_connected},
       "diego_brain": {"internet_connected": $internet_connected},
       "diego_cell": {"internet_connected": $internet_connected},
       "loggregator_trafficcontroller": {"internet_connected": $internet_connected},
@@ -254,10 +253,6 @@ cf_properties=$(
       ".properties.uaa_database.external.port": { "value": "3306" },
       ".properties.uaa_database.external.uaa_username": { "value": $db_uaa_username },
       ".properties.uaa_database.external.uaa_password": { "value": { "secret": $db_uaa_password } },
-      ".cloud_controller.system_domain": { "value": "sys.\($pcf_ert_domain)" },
-      ".cloud_controller.apps_domain": { "value": "cfapps.\($pcf_ert_domain)" },
-      ".cloud_controller.allow_app_ssh_access": { "value": true },
-      ".cloud_controller.security_event_logging_enabled": { "value": true },
       ".router.disable_insecure_cookies": { "value": false },
       ".push-apps-manager.company_name": { "value": "pcf-\($iaas)" },
       ".mysql_monitor.recipient_email": { "value" : $mysql_monitor_recipient_email }

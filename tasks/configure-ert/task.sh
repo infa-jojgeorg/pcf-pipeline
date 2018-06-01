@@ -94,25 +94,52 @@ cf_resources=$(
     --argjson internet_connected $INTERNET_CONNECTED \
     '
     {
+      "consul_server": {"internet_connected": $internet_connected},
+      "nats": {"internet_connected": $internet_connected},
+      "nfs_server": {"internet_connected": $internet_connected},
+      "mysql_proxy": {
+        "instances": 0,
+        "internet_connected": $internet_connected
+      },
+      "mysql": {
+        "instances": 0,
+        "internet_connected": $internet_connected
+      },
+      "backup-prepare": {"internet_connected": $internet_connected},
+      "diego_database": {"internet_connected": $internet_connected},
+      "uaa": {"internet_connected": $internet_connected},
+      "cloud_controller": {"internet_connected": $internet_connected},
+      "ha_proxy": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},
+      "mysql_monitor": {
+        "instances": 0,
+        "internet_connected": $internet_connected
+      },
+      "clock_global": {"internet_connected": $internet_connected},
+      "cloud_controller_worker": {"internet_connected": $internet_connected},
+      "diego_brain": {"internet_connected": $internet_connected},
+      "diego_cell": {"internet_connected": $internet_connected},
+      "loggregator_trafficcontroller": {"internet_connected": $internet_connected},
       "syslog_adapter": {"internet_connected": $internet_connected},
       "syslog_scheduler": {"internet_connected": $internet_connected},
+      "doppler": {"internet_connected": $internet_connected},
       "tcp_router": {"internet_connected": $internet_connected},
       "smoke-tests": {"internet_connected": $internet_connected},
       "push-apps-manager": {"internet_connected": $internet_connected},
       "notifications": {"internet_connected": $internet_connected},
       "notifications-ui": {"internet_connected": $internet_connected},
       "push-pivotal-account": {"internet_connected": $internet_connected},
+      "autoscaling": {"internet_connected": $internet_connected},
+      "autoscaling-register-broker": {"internet_connected": $internet_connected},
       "nfsbrokerpush": {"internet_connected": $internet_connected},
+      "bootstrap": {"internet_connected": $internet_connected},
+      "mysql-rejoin-unsafe": {"internet_connected": $internet_connected}
     }
-
     |
-
     # ELBs
-
     if $iaas == "aws" then
       .router |= . + { "elb_names": ["\($terraform_prefix)-Pcf-Http-Elb"] }
-   #   | .control |= . + { "elb_names": ["\($terraform_prefix)-Pcf-Ssh-Elb"] }
+      | .diego_brain |= . + { "elb_names": ["\($terraform_prefix)-Pcf-Ssh-Elb"] }
     elif $iaas == "gcp" then
       .router |= . + { "elb_names": ["http:\($terraform_prefix)-http-lb-backend","tcp:\($terraform_prefix)-wss-logs"] }
       | .diego_brain |= . + { "elb_names": ["tcp:\($terraform_prefix)-ssh-proxy"] }
@@ -195,6 +222,7 @@ cf_properties=$(
       },
       ".properties.tcp_routing": { "value": "disable" },
       ".properties.route_services": { "value": "enable" },
+      ".ha_proxy.skip_cert_verify": { "value": true },
       ".properties.container_networking_network_cidr": { "value": $container_networking_nw_cidr },
       ".properties.route_services.enable.ignore_ssl_cert_verification": { "value": true },
       ".properties.security_acknowledgement": { "value": $security_acknowledgement },
@@ -228,13 +256,15 @@ cf_properties=$(
       ".properties.uaa_database.external.port": { "value": "3306" },
       ".properties.uaa_database.external.uaa_username": { "value": $db_uaa_username },
       ".properties.uaa_database.external.uaa_password": { "value": { "secret": $db_uaa_password } },
+      ".cloud_controller.system_domain": { "value": "sys.\($pcf_ert_domain)" },
+      ".cloud_controller.apps_domain": { "value": "cfapps.\($pcf_ert_domain)" },
+      ".cloud_controller.allow_app_ssh_access": { "value": true },
+      ".cloud_controller.security_event_logging_enabled": { "value": true },
       ".router.disable_insecure_cookies": { "value": false },
       ".push-apps-manager.company_name": { "value": "pcf-\($iaas)" },
       ".mysql_monitor.recipient_email": { "value" : $mysql_monitor_recipient_email }
     }
-
     +
-
     # logger_endpoint_port
     if $iaas == "aws" then
       {
@@ -243,11 +273,8 @@ cf_properties=$(
     else
       .
     end
-
     +
-
     # Blobstore
-
     if $iaas == "aws" then
       {
         ".properties.system_blobstore": { "value": "external" },
@@ -257,7 +284,7 @@ cf_properties=$(
         ".properties.system_blobstore.external.resources_bucket": { "value": "\($terraform_prefix)-resources" },
         ".properties.system_blobstore.external.access_key": { "value": $aws_access_key },
         ".properties.system_blobstore.external.secret_key": { "value": { "secret": $aws_secret_key } },
-        ".properties.system_blobstore.external.signature_version": { "value": "4" },
+        ".properties.system_blobstore.external.signature_version.value": { "value": "4" },
         ".properties.system_blobstore.external.region": { "value": $aws_region },
         ".properties.system_blobstore.external.endpoint": { "value": $s3_endpoint }
       }
@@ -274,11 +301,8 @@ cf_properties=$(
     else
       .
     end
-
     +
-
     # MySQL Backups
-
     if $mysql_backups == "scp" then
       {
         ".properties.mysql_backups": {"value": $mysql_backups},
@@ -304,9 +328,7 @@ cf_properties=$(
         ".properties.mysql_backups": {"value": "disable"}
       }
     end
-
     +
-
     # SSL Termination
     {
       ".properties.networking_poe_ssl_cert": {
@@ -316,9 +338,7 @@ cf_properties=$(
         }
       }
     }
-
     +
-
     # HAProxy Forward TLS
     if $haproxy_forward_tls == "enable" then
       {
@@ -336,17 +356,13 @@ cf_properties=$(
         }
       }
     end
-
     +
-
     {
       ".properties.routing_disable_http": {
         "value": $routing_disable_http
       }
     }
-
     +
-
     # TLS Cipher Suites
     {
       ".properties.gorouter_ssl_ciphers": {

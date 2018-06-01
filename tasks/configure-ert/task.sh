@@ -107,7 +107,6 @@ cf_resources=$(
       },
       "diego_database": {"internet_connected": $internet_connected},
       "uaa": {"internet_connected": $internet_connected},
-      "cloud_controller": {"internet_connected": $internet_connected},
       "ha_proxy": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},
       "mysql_monitor": {

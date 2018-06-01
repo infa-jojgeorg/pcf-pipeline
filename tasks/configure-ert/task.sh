@@ -105,13 +105,11 @@ cf_resources=$(
         "internet_connected": $internet_connected
       },
       "uaa": {"internet_connected": $internet_connected},
-      "ha_proxy": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},
       "mysql_monitor": {
         "instances": 0,
         "internet_connected": $internet_connected
       },
-      "loggregator_trafficcontroller": {"internet_connected": $internet_connected},
       "syslog_adapter": {"internet_connected": $internet_connected},
       "syslog_scheduler": {"internet_connected": $internet_connected},
       "tcp_router": {"internet_connected": $internet_connected},
@@ -213,7 +211,6 @@ cf_properties=$(
       },
       ".properties.tcp_routing": { "value": "disable" },
       ".properties.route_services": { "value": "enable" },
-      ".ha_proxy.skip_cert_verify": { "value": true },
       ".properties.container_networking_network_cidr": { "value": $container_networking_nw_cidr },
       ".properties.route_services.enable.ignore_ssl_cert_verification": { "value": true },
       ".properties.security_acknowledgement": { "value": $security_acknowledgement },

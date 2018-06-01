@@ -96,16 +96,8 @@ cf_resources=$(
     {
       "nats": {"internet_connected": $internet_connected},
       "nfs_server": {"internet_connected": $internet_connected},
-      "mysql_proxy": {
-        "instances": 0,
-        "internet_connected": $internet_connected
-      },
       "uaa": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},
-      "mysql_monitor": {
-        "instances": 0,
-        "internet_connected": $internet_connected
-      },
       "syslog_adapter": {"internet_connected": $internet_connected},
       "syslog_scheduler": {"internet_connected": $internet_connected},
       "tcp_router": {"internet_connected": $internet_connected},
@@ -115,7 +107,6 @@ cf_resources=$(
       "notifications-ui": {"internet_connected": $internet_connected},
       "push-pivotal-account": {"internet_connected": $internet_connected},
       "nfsbrokerpush": {"internet_connected": $internet_connected},
-      "mysql-rejoin-unsafe": {"internet_connected": $internet_connected}
     }
 
     |

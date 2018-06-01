@@ -100,10 +100,6 @@ cf_resources=$(
         "instances": 0,
         "internet_connected": $internet_connected
       },
-   /*   "mysql": {
-        "instances": 0,
-        "internet_connected": $internet_connected
-      },*/
       "uaa": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},
       "mysql_monitor": {

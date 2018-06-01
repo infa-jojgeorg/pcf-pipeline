@@ -104,7 +104,6 @@ cf_resources=$(
         "instances": 0,
         "internet_connected": $internet_connected
       },
-      "diego_database": {"internet_connected": $internet_connected},
       "uaa": {"internet_connected": $internet_connected},
       "ha_proxy": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},

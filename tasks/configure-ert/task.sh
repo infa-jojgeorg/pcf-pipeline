@@ -114,7 +114,6 @@ cf_resources=$(
       "loggregator_trafficcontroller": {"internet_connected": $internet_connected},
       "syslog_adapter": {"internet_connected": $internet_connected},
       "syslog_scheduler": {"internet_connected": $internet_connected},
-      "doppler": {"internet_connected": $internet_connected},
       "tcp_router": {"internet_connected": $internet_connected},
       "smoke-tests": {"internet_connected": $internet_connected},
       "push-apps-manager": {"internet_connected": $internet_connected},
@@ -131,7 +130,7 @@ cf_resources=$(
 
     if $iaas == "aws" then
       .router |= . + { "elb_names": ["\($terraform_prefix)-Pcf-Http-Elb"] }
-      | .control |= . + { "elb_names": ["\($terraform_prefix)-Pcf-Ssh-Elb"] }
+   #   | .control |= . + { "elb_names": ["\($terraform_prefix)-Pcf-Ssh-Elb"] }
     elif $iaas == "gcp" then
       .router |= . + { "elb_names": ["http:\($terraform_prefix)-http-lb-backend","tcp:\($terraform_prefix)-wss-logs"] }
       | .diego_brain |= . + { "elb_names": ["tcp:\($terraform_prefix)-ssh-proxy"] }

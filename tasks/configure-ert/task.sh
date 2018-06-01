@@ -105,7 +105,6 @@ cf_resources=$(
         "instances": 0,
         "internet_connected": $internet_connected
       },
-      "backup-prepare": {"internet_connected": $internet_connected},
       "diego_database": {"internet_connected": $internet_connected},
       "uaa": {"internet_connected": $internet_connected},
       "cloud_controller": {"internet_connected": $internet_connected},
@@ -115,7 +114,6 @@ cf_resources=$(
         "instances": 0,
         "internet_connected": $internet_connected
       },
-      "clock_global": {"internet_connected": $internet_connected},
       "cloud_controller_worker": {"internet_connected": $internet_connected},
       "diego_brain": {"internet_connected": $internet_connected},
       "diego_cell": {"internet_connected": $internet_connected},
@@ -129,10 +127,7 @@ cf_resources=$(
       "notifications": {"internet_connected": $internet_connected},
       "notifications-ui": {"internet_connected": $internet_connected},
       "push-pivotal-account": {"internet_connected": $internet_connected},
-      "autoscaling": {"internet_connected": $internet_connected},
-      "autoscaling-register-broker": {"internet_connected": $internet_connected},
       "nfsbrokerpush": {"internet_connected": $internet_connected},
-      "bootstrap": {"internet_connected": $internet_connected},
       "mysql-rejoin-unsafe": {"internet_connected": $internet_connected}
     }
 

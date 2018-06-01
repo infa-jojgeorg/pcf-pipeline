@@ -94,7 +94,6 @@ cf_resources=$(
     --argjson internet_connected $INTERNET_CONNECTED \
     '
     {
-      "nats": {"internet_connected": $internet_connected},
       "nfs_server": {"internet_connected": $internet_connected},
       "uaa": {"internet_connected": $internet_connected},
       "router": {"internet_connected": $internet_connected},
